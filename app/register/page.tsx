@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -345,7 +345,7 @@ const ROLES: Array<{ key: AuthRole; label: string; icon: React.ReactNode }> = [
   { key: "rider", label: "Rider", icon: <Bike size={20} color="var(--red)" /> },
 ];
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -722,5 +722,29 @@ export default function RegisterPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            fontFamily: "DM Sans, sans-serif",
+            fontSize: "18px",
+            color: "#64748b",
+          }}
+        >
+          Loading...
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }
