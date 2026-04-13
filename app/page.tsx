@@ -1,51 +1,133 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import confetti from 'canvas-confetti';
+import { FormEvent, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Utensils, Bike, Store, Sparkles, MapPin,
-  Zap, Menu, X, ShoppingBag, ArrowRight, Flame, Star,
-  Clock, Search, TrendingUp, Shield,
-} from 'lucide-react';
+  Utensils,
+  Bike,
+  Store,
+  Sparkles,
+  MapPin,
+  Zap,
+  Menu,
+  X,
+  ShoppingBag,
+  ArrowRight,
+  Flame,
+  Star,
+  Clock,
+  Search,
+  TrendingUp,
+  Shield,
+} from "lucide-react";
 
 // ─────────────────────────────────────────────
 //  AI RECOMMENDATION ENGINE (client-side mock)
 //  Replace processPrompt with a real API call when ready.
 // ─────────────────────────────────────────────
 
+interface Recommendation {
+  meal: string;
+  vendor: string;
+  price: string;
+  time: string;
+  rating: string;
+  tag: string;
+}
+
+interface RecommendationResult {
+  label: string;
+  recs: Recommendation[];
+}
+
 class AIRecommendationEngine {
-  processPrompt(prompt) {
+  processPrompt(prompt: string): RecommendationResult {
     const t = prompt.toLowerCase();
-    if (t.includes('spicy') || t.includes('pepper') || t.includes('hot'))
+    if (t.includes("spicy") || t.includes("pepper") || t.includes("hot"))
       return {
-        label: 'High-Heat Picks',
+        label: "High-Heat Picks",
         recs: [
-          { meal: 'Peri-Peri Chicken Wrap', vendor: 'KFC Bodija',  price: '₦4,500', time: '14m', rating: '4.9', tag: 'Trending'   },
-          { meal: 'Suya Pepper Steak',      vendor: "Malam's Spot", price: '₦3,200', time: '19m', rating: '4.7', tag: 'Local Fave' },
+          {
+            meal: "Peri-Peri Chicken Wrap",
+            vendor: "KFC Bodija",
+            price: "₦4,500",
+            time: "14m",
+            rating: "4.9",
+            tag: "Trending",
+          },
+          {
+            meal: "Suya Pepper Steak",
+            vendor: "Malam's Spot",
+            price: "₦3,200",
+            time: "19m",
+            rating: "4.7",
+            tag: "Local Fave",
+          },
         ],
       };
-    if (t.includes('budget') || t.includes('cheap') || /₦?\d+/.test(t))
+    if (t.includes("budget") || t.includes("cheap") || /₦?\d+/.test(t))
       return {
-        label: 'Value Deals',
+        label: "Value Deals",
         recs: [
-          { meal: 'Student Combo Jollof',      vendor: 'Item 7',        price: '₦1,800', time: '9m', rating: '4.6', tag: 'Best Value' },
-          { meal: 'Sausage Roll & Hollandia',  vendor: 'Campus Bakery', price: '₦1,100', time: '5m', rating: '4.8', tag: 'Quick Pick' },
+          {
+            meal: "Student Combo Jollof",
+            vendor: "Item 7",
+            price: "₦1,800",
+            time: "9m",
+            rating: "4.6",
+            tag: "Best Value",
+          },
+          {
+            meal: "Sausage Roll & Hollandia",
+            vendor: "Campus Bakery",
+            price: "₦1,100",
+            time: "5m",
+            rating: "4.8",
+            tag: "Quick Pick",
+          },
         ],
       };
-    if (t.includes('healthy') || t.includes('salad') || t.includes('vegan'))
+    if (t.includes("healthy") || t.includes("salad") || t.includes("vegan"))
       return {
-        label: 'Clean Eats',
+        label: "Clean Eats",
         recs: [
-          { meal: 'Grilled Chicken Power Bowl', vendor: 'GreenBowl',   price: '₦3,800', time: '17m', rating: '4.9', tag: 'Protein' },
-          { meal: 'Acai & Granola Parfait',     vendor: 'SmoothieHub', price: '₦2,200', time: '7m',  rating: '4.7', tag: 'Fresh'   },
+          {
+            meal: "Grilled Chicken Power Bowl",
+            vendor: "GreenBowl",
+            price: "₦3,800",
+            time: "17m",
+            rating: "4.9",
+            tag: "Protein",
+          },
+          {
+            meal: "Acai & Granola Parfait",
+            vendor: "SmoothieHub",
+            price: "₦2,200",
+            time: "7m",
+            rating: "4.7",
+            tag: "Fresh",
+          },
         ],
       };
     return {
-      label: 'Trending Now',
+      label: "Trending Now",
       recs: [
-        { meal: 'Classic Beef Shawarma XL', vendor: 'Shawarma King', price: '₦3,000', time: '12m', rating: '4.9', tag: '🔥 Hot'      },
-        { meal: 'Jollof Rice & Turkey Leg', vendor: 'Tantalizers',   price: '₦5,500', time: '18m', rating: '4.8', tag: 'Crowd Fave' },
+        {
+          meal: "Classic Beef Shawarma XL",
+          vendor: "Shawarma King",
+          price: "₦3,000",
+          time: "12m",
+          rating: "4.9",
+          tag: "🔥 Hot",
+        },
+        {
+          meal: "Jollof Rice & Turkey Leg",
+          vendor: "Tantalizers",
+          price: "₦5,500",
+          time: "18m",
+          rating: "4.8",
+          tag: "Crowd Fave",
+        },
       ],
     };
   }
@@ -62,45 +144,126 @@ function DynamicIsland() {
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
-    if (!open) { setStage(0); return; }
+    if (!open) return;
     const t1 = setTimeout(() => setStage(1), 1600);
     const t2 = setTimeout(() => setStage(2), 3800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [open]);
 
-  const stages = ['Grabbing your meal…', 'Rider on Bodija Road…', 'Arriving at your gate!'];
-  const pct    = [28, 62, 96][stage];
+  const stages = [
+    "Grabbing your meal…",
+    "Rider on Bodija Road…",
+    "Arriving at your gate!",
+  ];
+  const pct = [28, 62, 96][stage];
 
   return (
     <div
-      onClick={() => setOpen(o => !o)}
+      onClick={() =>
+        setOpen((o) => {
+          if (!o) setStage(0);
+          return !o;
+        })
+      }
       style={{
-        position: 'fixed', top: 18, left: '50%', transform: 'translateX(-50%)',
-        background: '#fff', borderRadius: 50,
-        width: open ? 320 : 172, height: open ? 136 : 44,
-        padding: open ? '16px 20px' : '0 20px',
-        display: 'flex', flexDirection: 'column',
-        justifyContent: open ? 'flex-start' : 'center', alignItems: 'center',
-        zIndex: 9000, cursor: 'pointer', overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(230,0,0,0.18)',
-        border: '1px solid rgba(230,0,0,0.12)',
-        transition: 'all 0.48s cubic-bezier(0.32,0.72,0,1)',
+        position: "fixed",
+        top: 18,
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "#fff",
+        borderRadius: 50,
+        width: open ? 320 : 172,
+        height: open ? 136 : 44,
+        padding: open ? "16px 20px" : "0 20px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: open ? "flex-start" : "center",
+        alignItems: "center",
+        zIndex: 9000,
+        cursor: "pointer",
+        overflow: "hidden",
+        boxShadow: "0 8px 32px rgba(230,0,0,0.18)",
+        border: "1px solid rgba(230,0,0,0.12)",
+        transition: "all 0.48s cubic-bezier(0.32,0.72,0,1)",
       }}
     >
       {!open ? (
-        <span style={{ display:'flex', alignItems:'center', gap:8, fontWeight:800, fontSize:13, color:'#e60000', fontFamily:'inherit' }}>
-          <span style={{ width:8, height:8, borderRadius:'50%', background:'#e60000', animation:'pulse-red 1.8s infinite' }} />
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontWeight: 800,
+            fontSize: 13,
+            color: "#e60000",
+            fontFamily: "inherit",
+          }}
+        >
+          <span
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: "#e60000",
+              animation: "pulse-red 1.8s infinite",
+            }}
+          />
           1 Active Order
         </span>
       ) : (
-        <div style={{ width:'100%', animation:'fadeUp 0.4s ease' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:10 }}>
-            <span style={{ fontSize:11, fontWeight:700, color:'#888', letterSpacing:1, textTransform:'uppercase' }}>ODG-LCU-99</span>
-            <span style={{ fontSize:12, fontWeight:900, color:'#e60000' }}>12 min away</span>
+        <div style={{ width: "100%", animation: "fadeUp 0.4s ease" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#888",
+                letterSpacing: 1,
+                textTransform: "uppercase",
+              }}
+            >
+              ODG-LCU-99
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 900, color: "#e60000" }}>
+              12 min away
+            </span>
           </div>
-          <p style={{ margin:'0 0 12px', fontWeight:800, fontSize:14, color:'#0f172a' }}>{stages[stage]}</p>
-          <div style={{ height:5, background:'#f1f5f9', borderRadius:5, overflow:'hidden' }}>
-            <div style={{ height:'100%', background:'linear-gradient(90deg,#e60000,#ff4d4d)', width:`${pct}%`, transition:'width 1.2s ease-in-out', borderRadius:5 }} />
+          <p
+            style={{
+              margin: "0 0 12px",
+              fontWeight: 800,
+              fontSize: 14,
+              color: "#0f172a",
+            }}
+          >
+            {stages[stage]}
+          </p>
+          <div
+            style={{
+              height: 5,
+              background: "#f1f5f9",
+              borderRadius: 5,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                background: "linear-gradient(90deg,#e60000,#ff4d4d)",
+                width: `${pct}%`,
+                transition: "width 1.2s ease-in-out",
+                borderRadius: 5,
+              }}
+            />
           </div>
         </div>
       )}
@@ -113,20 +276,68 @@ function DynamicIsland() {
 // ─────────────────────────────────────────────
 
 const orders = [
-  { id:'ACU-102', label:'Chicken Burger', color:'#ff6b35', status:'12m away', icon:'🔥' },
-  { id:'LCU-44',  label:'Jollof Rice',   color:'#00c853', status:'Delivered', icon:'✅' },
-  { id:'UI-90',   label:'Parfait XL',    color:'#00b0ff', status:'Preparing', icon:'🚀' },
-  { id:'ACU-114', label:'Beef Shawarma', color:'#ff6b35', status:'8m away',   icon:'🔥' },
+  {
+    id: "ACU-102",
+    label: "Chicken Burger",
+    color: "#ff6b35",
+    status: "12m away",
+    icon: "🔥",
+  },
+  {
+    id: "LCU-44",
+    label: "Jollof Rice",
+    color: "#00c853",
+    status: "Delivered",
+    icon: "✅",
+  },
+  {
+    id: "UI-90",
+    label: "Parfait XL",
+    color: "#00b0ff",
+    status: "Preparing",
+    icon: "🚀",
+  },
+  {
+    id: "ACU-114",
+    label: "Beef Shawarma",
+    color: "#ff6b35",
+    status: "8m away",
+    icon: "🔥",
+  },
 ];
 
 function Ticker() {
   const track = [...orders, ...orders, ...orders];
   return (
-    <div style={{ background:'#0f172a', padding:'14px 0', overflow:'hidden', whiteSpace:'nowrap' }}>
-      <div style={{ display:'inline-block', animation:'scrollLeft 30s linear infinite' }}>
+    <div
+      style={{
+        background: "#0f172a",
+        padding: "14px 0",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <div
+        style={{
+          display: "inline-block",
+          animation: "scrollLeft 30s linear infinite",
+        }}
+      >
         {track.map((o, i) => (
-          <span key={i} style={{ fontSize:14, fontWeight:700, marginRight:60, color:'#fff', fontFamily:'inherit' }}>
-            <span style={{ color: o.color }}>{o.icon} Order #{o.id}:</span> {o.label} — <span style={{ color:'#94a3b8' }}>{o.status}</span>
+          <span
+            key={i}
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              marginRight: 60,
+              color: "#fff",
+              fontFamily: "inherit",
+            }}
+          >
+            <span style={{ color: o.color }}>
+              {o.icon} Order #{o.id}:
+            </span>{" "}
+            {o.label} — <span style={{ color: "#94a3b8" }}>{o.status}</span>
           </span>
         ))}
       </div>
@@ -138,51 +349,160 @@ function Ticker() {
 //  AI MODAL
 // ─────────────────────────────────────────────
 
-function AIModal({ results, onClose }) {
+interface AIModalProps {
+  results: RecommendationResult | null;
+  onClose: () => void;
+}
+
+function AIModal({ results, onClose }: AIModalProps) {
   if (!results) return null;
   return (
-    <div style={{
-      position:'fixed', inset:0,
-      background:'rgba(15,23,42,0.6)',
-      backdropFilter:'blur(18px)',
-      zIndex:9999, display:'flex', justifyContent:'center', alignItems:'center',
-      padding:'20px', animation:'fadeIn 0.25s ease',
-    }}>
-      <div style={{
-        background:'#fff', borderRadius:28,
-        padding:'36px', maxWidth:560, width:'100%',
-        boxShadow:'0 40px 80px rgba(0,0,0,0.2)',
-        animation:'slideUp 0.3s ease',
-      }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(15,23,42,0.6)",
+        backdropFilter: "blur(18px)",
+        zIndex: 9999,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "20px",
+        animation: "fadeIn 0.25s ease",
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 28,
+          padding: "36px",
+          maxWidth: 560,
+          width: "100%",
+          boxShadow: "0 40px 80px rgba(0,0,0,0.2)",
+          animation: "slideUp 0.3s ease",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Sparkles size={22} color="#e60000" />
-            <span style={{ fontWeight:900, fontSize:22, color:'#0f172a', fontFamily:'inherit' }}>ODG Picks</span>
+            <span
+              style={{
+                fontWeight: 900,
+                fontSize: 22,
+                color: "#0f172a",
+                fontFamily: "inherit",
+              }}
+            >
+              ODG Picks
+            </span>
           </div>
-          <button onClick={onClose} style={{ background:'#f8f9fa', border:'none', borderRadius:'50%', padding:8, cursor:'pointer' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#f8f9fa",
+              border: "none",
+              borderRadius: "50%",
+              padding: 8,
+              cursor: "pointer",
+            }}
+          >
             <X size={20} color="#64748b" />
           </button>
         </div>
-        <p style={{ color:'#64748b', fontWeight:600, fontSize:15, marginBottom:24, fontFamily:'inherit' }}>{results.label}</p>
-        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        <p
+          style={{
+            color: "#64748b",
+            fontWeight: 600,
+            fontSize: 15,
+            marginBottom: 24,
+            fontFamily: "inherit",
+          }}
+        >
+          {results.label}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {results.recs.map((r, i) => (
-            <div key={i} style={{
-              display:'flex', justifyContent:'space-between', alignItems:'center',
-              padding:'18px 20px', border:'1.5px solid #f1f5f9', borderRadius:18,
-              background:'#fafbfc',
-            }}>
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "18px 20px",
+                border: "1.5px solid #f1f5f9",
+                borderRadius: 18,
+                background: "#fafbfc",
+              }}
+            >
               <div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-                  <span style={{ background:'#e60000', color:'#fff', fontSize:10, fontWeight:900, padding:'3px 8px', borderRadius:20, letterSpacing:0.5, fontFamily:'inherit' }}>{r.tag}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      background: "#e60000",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 900,
+                      padding: "3px 8px",
+                      borderRadius: 20,
+                      letterSpacing: 0.5,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {r.tag}
+                  </span>
                 </div>
-                <p style={{ margin:0, fontWeight:800, fontSize:17, color:'#0f172a', fontFamily:'inherit' }}>{r.meal}</p>
-                <p style={{ margin:0, color:'#94a3b8', fontSize:13, fontWeight:600, fontFamily:'inherit' }}>{r.vendor} · ⭐ {r.rating} · 🕒 {r.time}</p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 800,
+                    fontSize: 17,
+                    color: "#0f172a",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {r.meal}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#94a3b8",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {r.vendor} · ⭐ {r.rating} · 🕒 {r.time}
+                </p>
               </div>
-              <button style={{
-                background:'#e60000', color:'#fff', border:'none',
-                padding:'12px 20px', borderRadius:40, fontWeight:900,
-                cursor:'pointer', fontSize:15, fontFamily:'inherit',
-              }}>{r.price}</button>
+              <button
+                style={{
+                  background: "#e60000",
+                  color: "#fff",
+                  border: "none",
+                  padding: "12px 20px",
+                  borderRadius: 40,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  fontSize: 15,
+                  fontFamily: "inherit",
+                }}
+              >
+                {r.price}
+              </button>
             </div>
           ))}
         </div>
@@ -196,17 +516,41 @@ function AIModal({ results, onClose }) {
 // ─────────────────────────────────────────────
 
 const stats = [
-  { value: '15m',  label: 'Avg. Delivery Time'  },
-  { value: '20+',  label: 'Campuses Expanding'   },
-  { value: '4.9★', label: 'Platform Rating'      },
-  { value: '₦0',   label: 'Delivery Fee Today'   },
+  { value: "15m", label: "Avg. Delivery Time" },
+  { value: "20+", label: "Campuses Expanding" },
+  { value: "4.9★", label: "Platform Rating" },
+  { value: "₦0", label: "Delivery Fee Today" },
 ];
 
 const campuses = [
-  { name: 'Lead City University',    city: 'Ibadan', state: 'Oyo', status: 'LIVE', time: '12m' },
-  { name: 'Ajayi Crowther University', city: 'Oyo',  state: 'Oyo', status: 'LIVE', time: '15m' },
-  { name: 'University of Ibadan',    city: 'Ibadan', state: 'Oyo', status: 'SOON', time: '20m' },
-  { name: 'The Polytechnic Ibadan',  city: 'Ibadan', state: 'Oyo', status: 'SOON', time: '—'   },
+  {
+    name: "Lead City University",
+    city: "Ibadan",
+    state: "Oyo",
+    status: "LIVE",
+    time: "12m",
+  },
+  {
+    name: "Ajayi Crowther University",
+    city: "Oyo",
+    state: "Oyo",
+    status: "LIVE",
+    time: "15m",
+  },
+  {
+    name: "University of Ibadan",
+    city: "Ibadan",
+    state: "Oyo",
+    status: "SOON",
+    time: "20m",
+  },
+  {
+    name: "The Polytechnic Ibadan",
+    city: "Ibadan",
+    state: "Oyo",
+    status: "SOON",
+    time: "—",
+  },
 ];
 
 // ─────────────────────────────────────────────
@@ -215,12 +559,12 @@ const campuses = [
 
 export default function ODGLanding() {
   const router = useRouter();
-  const [menuOpen,   setMenuOpen]   = useState(false);
-  const [aiPrompt,   setAiPrompt]   = useState('');
-  const [aiLoading,  setAiLoading]  = useState(false);
-  const [aiModal,    setAiModal]    = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiModal, setAiModal] = useState<RecommendationResult | null>(null);
 
-  const handleAI = (e) => {
+  const handleAI = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
@@ -402,15 +746,37 @@ export default function ODGLanding() {
 
       {/* ── NAV ── */}
       <nav className="nav">
-        <a href="#" className="nav-logo">ODG<span>.</span></a>
-        <button className="btn-menu" onClick={() => setMenuOpen(o => !o)}>
-          {menuOpen ? <X size={28} color="var(--dark)" /> : <Menu size={28} color="var(--dark)" />}
+        <a href="#" className="nav-logo">
+          ODG<span>.</span>
+        </a>
+        <button className="btn-menu" onClick={() => setMenuOpen((o) => !o)}>
+          {menuOpen ? (
+            <X size={28} color="var(--dark)" />
+          ) : (
+            <Menu size={28} color="var(--dark)" />
+          )}
         </button>
-        <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
-          <a href="#ai"       className="nav-link" onClick={() => setMenuOpen(false)}>ODG AI</a>
-          <a href="#campuses" className="nav-link" onClick={() => setMenuOpen(false)}>Campuses</a>
-          <a href="#join"     className="nav-link" onClick={() => setMenuOpen(false)}>Join</a>
-          <button className="btn-nav" onClick={() => router.push('/login')}>Sign In</button>
+        <div className={`nav-links ${menuOpen ? "open" : ""}`}>
+          <a href="#ai" className="nav-link" onClick={() => setMenuOpen(false)}>
+            ODG AI
+          </a>
+          <a
+            href="#campuses"
+            className="nav-link"
+            onClick={() => setMenuOpen(false)}
+          >
+            Campuses
+          </a>
+          <a
+            href="#join"
+            className="nav-link"
+            onClick={() => setMenuOpen(false)}
+          >
+            Join
+          </a>
+          <button className="btn-nav" onClick={() => router.push("/login")}>
+            Sign In
+          </button>
         </div>
       </nav>
 
@@ -420,52 +786,142 @@ export default function ODGLanding() {
         <div className="hero-container">
           <div>
             <div className="hero-eyebrow">
-              <span style={{ width:8, height:8, borderRadius:'50%', background:'#fff', animation:'pulse-red 1.8s infinite', flexShrink:0 }} />
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  animation: "pulse-red 1.8s infinite",
+                  flexShrink: 0,
+                }}
+              />
               Now Live · Ibadan & Oyo
             </div>
             <h1 className="hero-h1">
-              Campus meals.<br />
-              Delivered in<br />
-              <span style={{ color:'rgba(255,255,255,0.45)', textDecoration:'line-through', fontSize:'0.7em' }}>forever.</span>
-              {' '}15 min.
+              Campus meals.
+              <br />
+              Delivered in
+              <br />
+              <span
+                style={{
+                  color: "rgba(255,255,255,0.45)",
+                  textDecoration: "line-through",
+                  fontSize: "0.7em",
+                }}
+              >
+                forever.
+              </span>{" "}
+              15 min.
             </h1>
             <p className="hero-sub">
-              The premium food delivery network built for Nigerian university campuses. Hot, fresh meals from top vendors — to your exact hostel door.
+              The premium food delivery network built for Nigerian university
+              campuses. Hot, fresh meals from top vendors — to your exact hostel
+              door.
             </p>
             <div className="hero-ctas">
-              <button className="btn-white" onClick={() => router.push('/register?role=user')}>
+              <button
+                className="btn-white"
+                onClick={() => router.push("/register?role=user")}
+              >
                 <ShoppingBag size={22} /> Order Now
               </button>
-              <button className="btn-ghost" onClick={() => document.getElementById('campuses').scrollIntoView({ behavior:'smooth' })}>
+              <button
+                className="btn-ghost"
+                onClick={() =>
+                  document
+                    .getElementById("campuses")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
                 Explore Campuses <ArrowRight size={20} />
               </button>
             </div>
           </div>
 
           <div className="hero-floaters">
-            <div className="floater" style={{ top:'8%', right:'5%', animation:'floatA 6s ease-in-out infinite' }}>
-              <div className="floater-icon"><Flame size={22} color="#fff" /></div>
+            <div
+              className="floater"
+              style={{
+                top: "8%",
+                right: "5%",
+                animation: "floatA 6s ease-in-out infinite",
+              }}
+            >
+              <div className="floater-icon">
+                <Flame size={22} color="#fff" />
+              </div>
               <div>
                 <div className="floater-label">Trending Now</div>
                 <div className="floater-value">Spicy Chicken Wrap</div>
               </div>
             </div>
-            <div className="floater" style={{ top:'42%', left:'0%', animation:'floatB 7.5s ease-in-out infinite' }}>
-              <div className="floater-icon"><Clock size={22} color="#fff" /></div>
+            <div
+              className="floater"
+              style={{
+                top: "42%",
+                left: "0%",
+                animation: "floatB 7.5s ease-in-out infinite",
+              }}
+            >
+              <div className="floater-icon">
+                <Clock size={22} color="#fff" />
+              </div>
               <div>
                 <div className="floater-label">ETA to Block C</div>
                 <div className="floater-value">12 Minutes</div>
               </div>
             </div>
-            <div className="floater" style={{ bottom:'12%', right:'12%', animation:'floatA 5.5s ease-in-out infinite 1s', background:'#0f172a' }}>
-              <div className="floater-icon" style={{ background:'rgba(255,255,255,0.1)' }}><Star size={22} color="#f59e0b" fill="#f59e0b" /></div>
+            <div
+              className="floater"
+              style={{
+                bottom: "12%",
+                right: "12%",
+                animation: "floatA 5.5s ease-in-out infinite 1s",
+                background: "#0f172a",
+              }}
+            >
+              <div
+                className="floater-icon"
+                style={{ background: "rgba(255,255,255,0.1)" }}
+              >
+                <Star size={22} color="#f59e0b" fill="#f59e0b" />
+              </div>
               <div>
-                <div className="floater-label" style={{ color:'#94a3b8' }}>Vendor Rating</div>
-                <div className="floater-value" style={{ color:'#fff' }}>4.9 · 200+ Reviews</div>
+                <div className="floater-label" style={{ color: "#94a3b8" }}>
+                  Vendor Rating
+                </div>
+                <div className="floater-value" style={{ color: "#fff" }}>
+                  4.9 · 200+ Reviews
+                </div>
               </div>
             </div>
-            <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:320, height:320, borderRadius:'50%', border:'1.5px solid rgba(255,255,255,0.12)', zIndex:-1 }} />
-            <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:480, height:480, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.06)', zIndex:-1 }} />
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 320,
+                height: 320,
+                borderRadius: "50%",
+                border: "1.5px solid rgba(255,255,255,0.12)",
+                zIndex: -1,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 480,
+                height: 480,
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,0.06)",
+                zIndex: -1,
+              }}
+            />
           </div>
         </div>
       </header>
@@ -474,7 +930,7 @@ export default function ODGLanding() {
       <Ticker />
 
       {/* ── STATS ── */}
-      <div className="section" style={{ paddingBottom:0 }}>
+      <div className="section" style={{ paddingBottom: 0 }}>
         <div className="container">
           <div className="stats-grid">
             {stats.map((s, i) => (
@@ -488,29 +944,45 @@ export default function ODGLanding() {
       </div>
 
       {/* ── AI SEARCH ── */}
-      <section id="ai" className="section" style={{ textAlign:'center' }}>
+      <section id="ai" className="section" style={{ textAlign: "center" }}>
         <div className="container">
-          <div className="section-eyebrow"><Sparkles size={16} /> ODG Food AI</div>
-          <h2 className="section-h2" style={{ margin:'0 auto 16px', maxWidth:720 }}>
-            What are you <span style={{ color:'var(--red)' }}>craving?</span>
+          <div className="section-eyebrow">
+            <Sparkles size={16} /> ODG Food AI
+          </div>
+          <h2
+            className="section-h2"
+            style={{ margin: "0 auto 16px", maxWidth: 720 }}
+          >
+            What are you <span style={{ color: "var(--red)" }}>craving?</span>
           </h2>
-          <p className="section-sub" style={{ margin:'0 auto 48px' }}>
-            Describe your mood, budget, or dietary needs — our AI matches you with the best campus vendors instantly.
+          <p className="section-sub" style={{ margin: "0 auto 48px" }}>
+            Describe your mood, budget, or dietary needs — our AI matches you
+            with the best campus vendors instantly.
           </p>
           <form onSubmit={handleAI} className="ai-pill">
-            <Search size={24} color="#b0b8c8" style={{ marginLeft:20, flexShrink:0 }} className="ai-search-icon" />
+            <Search
+              size={24}
+              color="#b0b8c8"
+              style={{ marginLeft: 20, flexShrink: 0 }}
+              className="ai-search-icon"
+            />
             <input
               value={aiPrompt}
-              onChange={e => setAiPrompt(e.target.value)}
+              onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="e.g., 'budget ₦2500, something spicy near Block D'"
               className="ai-input"
               required
             />
             <button type="submit" className="btn-red" disabled={aiLoading}>
-              {aiLoading
-                ? <><div className="ai-spinner" /> Scanning…</>
-                : <><Sparkles size={18} /> Find Food</>
-              }
+              {aiLoading ? (
+                <>
+                  <div className="ai-spinner" /> Scanning…
+                </>
+              ) : (
+                <>
+                  <Sparkles size={18} /> Find Food
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -521,17 +993,50 @@ export default function ODGLanding() {
       {/* ── FEATURES ── */}
       <section className="section section-alt">
         <div className="container">
-          <div className="section-eyebrow"><Zap size={16} /> Why ODG</div>
-          <h2 className="section-h2">Built for campus life.<br /><span style={{ color:'var(--red)' }}>Nothing else.</span></h2>
-          <p className="section-sub" style={{ marginBottom:56 }}>Every feature engineered around how students actually eat, order, and live on campus.</p>
+          <div className="section-eyebrow">
+            <Zap size={16} /> Why ODG
+          </div>
+          <h2 className="section-h2">
+            Built for campus life.
+            <br />
+            <span style={{ color: "var(--red)" }}>Nothing else.</span>
+          </h2>
+          <p className="section-sub" style={{ marginBottom: 56 }}>
+            Every feature engineered around how students actually eat, order,
+            and live on campus.
+          </p>
           <div className="features-grid">
             {[
-              { icon:<Clock size={24} color="var(--red)" />,     title:'15-Minute Guarantee',    desc:'Our rider network is geo-optimised around campus layouts. Your food is hot when it arrives, not when it leaves.' },
-              { icon:<MapPin size={24} color="var(--red)" />,    title:'Hostel-Precise Delivery', desc:'Drop a pin at your exact block and room number. No more "meet me at the gate" situations.' },
-              { icon:<Star size={24} color="var(--red)" />,      title:'Curated 4.7★+ Vendors',  desc:"Every restaurant on ODG passes our taste and hygiene audit. Mediocre food doesn't ship." },
-              { icon:<Sparkles size={24} color="var(--red)" />,  title:'AI-Powered Matching',     desc:'Tell us your budget, craving, and dietary needs. Our AI surfaces the best options in seconds.' },
-              { icon:<Shield size={24} color="var(--red)" />,    title:'Secure Payments',         desc:'Pay with cards, bank transfers, or campus wallets. Every transaction is encrypted end-to-end.' },
-              { icon:<TrendingUp size={24} color="var(--red)" />,title:'Vendor Analytics',         desc:'Restaurant partners get real-time dashboards, peak-hour insights, and order flow management tools.' },
+              {
+                icon: <Clock size={24} color="var(--red)" />,
+                title: "15-Minute Guarantee",
+                desc: "Our rider network is geo-optimised around campus layouts. Your food is hot when it arrives, not when it leaves.",
+              },
+              {
+                icon: <MapPin size={24} color="var(--red)" />,
+                title: "Hostel-Precise Delivery",
+                desc: 'Drop a pin at your exact block and room number. No more "meet me at the gate" situations.',
+              },
+              {
+                icon: <Star size={24} color="var(--red)" />,
+                title: "Curated 4.7★+ Vendors",
+                desc: "Every restaurant on ODG passes our taste and hygiene audit. Mediocre food doesn't ship.",
+              },
+              {
+                icon: <Sparkles size={24} color="var(--red)" />,
+                title: "AI-Powered Matching",
+                desc: "Tell us your budget, craving, and dietary needs. Our AI surfaces the best options in seconds.",
+              },
+              {
+                icon: <Shield size={24} color="var(--red)" />,
+                title: "Secure Payments",
+                desc: "Pay with cards, bank transfers, or campus wallets. Every transaction is encrypted end-to-end.",
+              },
+              {
+                icon: <TrendingUp size={24} color="var(--red)" />,
+                title: "Vendor Analytics",
+                desc: "Restaurant partners get real-time dashboards, peak-hour insights, and order flow management tools.",
+              },
             ].map((f, i) => (
               <div key={i} className="feature-card">
                 <div className="feature-icon">{f.icon}</div>
@@ -546,20 +1051,36 @@ export default function ODGLanding() {
       {/* ── CAMPUSES ── */}
       <section id="campuses" className="section">
         <div className="container">
-          <div className="section-eyebrow"><MapPin size={16} /> Coverage</div>
-          <h2 className="section-h2">Active <span style={{ color:'var(--red)' }}>campuses.</span></h2>
-          <p className="section-sub" style={{ marginBottom:48 }}>We're live on the highest-density student campuses in Oyo State, with rapid expansion underway.</p>
+          <div className="section-eyebrow">
+            <MapPin size={16} /> Coverage
+          </div>
+          <h2 className="section-h2">
+            Active <span style={{ color: "var(--red)" }}>campuses.</span>
+          </h2>
+          <p className="section-sub" style={{ marginBottom: 48 }}>
+            We&apos;re live on the highest-density student campuses in Oyo
+            State, with rapid expansion underway.
+          </p>
           <div className="campus-grid">
             {campuses.map((c, i) => (
               <div key={i} className="campus-card">
                 <div>
-                  <span className={c.status === 'LIVE' ? 'campus-badge-live' : 'campus-badge-soon'}>
-                    {c.status === 'LIVE' ? '● Live Now' : '○ Coming Soon'}
+                  <span
+                    className={
+                      c.status === "LIVE"
+                        ? "campus-badge-live"
+                        : "campus-badge-soon"
+                    }
+                  >
+                    {c.status === "LIVE" ? "● Live Now" : "○ Coming Soon"}
                   </span>
                   <div className="campus-name">{c.name}</div>
-                  <div className="campus-loc"><MapPin size={14} />{c.city}, {c.state}</div>
+                  <div className="campus-loc">
+                    <MapPin size={14} />
+                    {c.city}, {c.state}
+                  </div>
                 </div>
-                <div style={{ textAlign:'right' }}>
+                <div style={{ textAlign: "right" }}>
                   <div className="campus-time">{c.time}</div>
                   <div className="campus-time-label">Avg. ETA</div>
                 </div>
@@ -572,19 +1093,44 @@ export default function ODGLanding() {
       {/* ── JOIN CTA (replaces the old inline form) ── */}
       <section id="join" className="join-section">
         <div className="join-inner">
-
           {/* Copy */}
           <div>
-            <div className="section-eyebrow" style={{ color:'rgba(255,255,255,0.45)' }}><Zap size={16} /> Join the Network</div>
-            <h2 className="section-h2" style={{ color:'#fff' }}>Your account.<br /><span style={{ color:'var(--red)' }}>Your role.</span></h2>
-            <p className="section-sub" style={{ color:'rgba(255,255,255,0.55)', marginBottom:40 }}>
-              Sign up as a student to start ordering, or as a vendor to manage your restaurant and unlock live dashboards.
+            <div
+              className="section-eyebrow"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              <Zap size={16} /> Join the Network
+            </div>
+            <h2 className="section-h2" style={{ color: "#fff" }}>
+              Your account.
+              <br />
+              <span style={{ color: "var(--red)" }}>Your role.</span>
+            </h2>
+            <p
+              className="section-sub"
+              style={{ color: "rgba(255,255,255,0.55)", marginBottom: 40 }}
+            >
+              Sign up as a student to start ordering, or as a vendor to manage
+              your restaurant and unlock live dashboards.
             </p>
-            <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:0 }}>
-              <button className="join-cta-btn" onClick={() => router.push('/register')}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 0,
+              }}
+            >
+              <button
+                className="join-cta-btn"
+                onClick={() => router.push("/register")}
+              >
                 <Zap size={20} /> Create Account
               </button>
-              <button className="join-login-link" onClick={() => router.push('/login')}>
+              <button
+                className="join-login-link"
+                onClick={() => router.push("/login")}
+              >
                 Already have an account? Sign in →
               </button>
             </div>
@@ -593,9 +1139,24 @@ export default function ODGLanding() {
           {/* Role cards */}
           <div className="join-cards">
             {[
-              { icon:<Utensils size={22} color="var(--red)" />, role:'Student',  desc:'Order from top campus vendors in minutes.',          href:'/register?role=user'   },
-              { icon:<Store    size={22} color="var(--red)" />, role:'Vendor',   desc:'List your restaurant, manage orders, grow revenue.', href:'/register?role=vendor' },
-              { icon:<Bike     size={22} color="var(--red)" />, role:'Rider',    desc:'Deliver on your schedule and earn daily.',           href:'/register?role=rider'  },
+              {
+                icon: <Utensils size={22} color="var(--red)" />,
+                role: "Student",
+                desc: "Order from top campus vendors in minutes.",
+                href: "/register?role=user",
+              },
+              {
+                icon: <Store size={22} color="var(--red)" />,
+                role: "Vendor",
+                desc: "List your restaurant, manage orders, grow revenue.",
+                href: "/register?role=vendor",
+              },
+              {
+                icon: <Bike size={22} color="var(--red)" />,
+                role: "Rider",
+                desc: "Deliver on your schedule and earn daily.",
+                href: "/register?role=rider",
+              },
             ].map((item, i) => (
               <a key={i} className="join-card" href={item.href}>
                 <div className="join-card-icon">{item.icon}</div>
@@ -615,27 +1176,48 @@ export default function ODGLanding() {
         <div className="container">
           <div className="footer-grid">
             <div>
-              <div className="footer-logo">ODG<span>.</span></div>
-              <p className="footer-desc">The premium food delivery network for Nigerian university campuses. Hot meals. Fast riders. Zero compromise.</p>
+              <div className="footer-logo">
+                ODG<span>.</span>
+              </div>
+              <p className="footer-desc">
+                The premium food delivery network for Nigerian university
+                campuses. Hot meals. Fast riders. Zero compromise.
+              </p>
             </div>
             <div>
               <div className="footer-heading">Platform</div>
-              <a href="#ai"       className="footer-link">ODG Food AI</a>
-              <a href="#campuses" className="footer-link">Campuses</a>
-              <a href="/register" className="footer-link">Create Account</a>
+              <a href="#ai" className="footer-link">
+                ODG Food AI
+              </a>
+              <a href="#campuses" className="footer-link">
+                Campuses
+              </a>
+              <a href="/register" className="footer-link">
+                Create Account
+              </a>
             </div>
             <div>
               <div className="footer-heading">Partner</div>
-              <a href="/register?role=vendor" className="footer-link">List Your Restaurant</a>
-              <a href="/register?role=rider"  className="footer-link">Become a Rider</a>
-              <a href="#"                     className="footer-link">Contact Sales</a>
+              <a href="/register?role=vendor" className="footer-link">
+                List Your Restaurant
+              </a>
+              <a href="/register?role=rider" className="footer-link">
+                Become a Rider
+              </a>
+              <a href="#" className="footer-link">
+                Contact Sales
+              </a>
             </div>
           </div>
           <div className="footer-bottom">
             <span>© 2026 ODG Deliveries Ltd. All rights reserved.</span>
-            <div style={{ display:'flex', gap:32 }}>
-              <a href="#" className="footer-link" style={{ marginBottom:0 }}>Privacy Policy</a>
-              <a href="#" className="footer-link" style={{ marginBottom:0 }}>Terms of Service</a>
+            <div style={{ display: "flex", gap: 32 }}>
+              <a href="#" className="footer-link" style={{ marginBottom: 0 }}>
+                Privacy Policy
+              </a>
+              <a href="#" className="footer-link" style={{ marginBottom: 0 }}>
+                Terms of Service
+              </a>
             </div>
           </div>
         </div>

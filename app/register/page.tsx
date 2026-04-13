@@ -1,10 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Utensils, Store, Bike, Zap, CheckCircle2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { RegistrationSystem } from '@/lib/RegistrationSystem';
+import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Utensils,
+  Store,
+  Bike,
+  Zap,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+} from "lucide-react";
+import confetti from "canvas-confetti";
+import { RegistrationSystem } from "@/lib/RegistrationSystem";
 
 // ── Shared ODG CSS tokens (keep in sync with landing page) ──────────────────
 const CSS = `
@@ -265,27 +275,55 @@ const CSS = `
   }
 `;
 
+type AuthRole = "user" | "vendor" | "rider";
+
+interface RegistrationForm {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+}
+
+interface FieldErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirm?: string;
+}
+
 // ── Password strength helper ─────────────────────────────────────────────────
-function getStrength(pw) {
+function getStrength(pw: string) {
   let score = 0;
-  if (pw.length >= 8)             score++;
-  if (/[A-Z]/.test(pw))           score++;
-  if (/[0-9]/.test(pw))           score++;
-  if (/[^A-Za-z0-9]/.test(pw))   score++;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
   return score; // 0-4
 }
 
-const strengthColors = ['#dc2626', '#f97316', '#eab308', '#16a34a'];
-const strengthLabels = ['Too weak', 'Weak', 'Fair', 'Strong'];
+const strengthColors = ["#dc2626", "#f97316", "#eab308", "#16a34a"];
+const strengthLabels = ["Too weak", "Weak", "Fair", "Strong"];
 
 // ── Google SVG icon ──────────────────────────────────────────────────────────
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48">
-      <path fill="#EA4335" d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.3 3.1 29.4 1 24 1 14.8 1 7 6.7 3.7 14.6l7 5.4C12.5 13.5 17.8 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.7 6.9l7.3 5.7c4.3-3.9 6.7-9.7 6.7-16.6z"/>
-      <path fill="#FBBC05" d="M10.7 28.6A14.9 14.9 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.8 23.8 0 0 0 .5 24c0 3.8.9 7.4 2.4 10.6l7.8-6z"/>
-      <path fill="#34A853" d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.3-5.7c-1.8 1.2-4.1 1.9-6.8 1.9-6.2 0-11.4-4.1-13.3-9.7l-7.8 6C7 41.3 14.8 47 24 47z"/>
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.1 0 5.9 1.1 8.1 2.9l6-6C34.3 3.1 29.4 1 24 1 14.8 1 7 6.7 3.7 14.6l7 5.4C12.5 13.5 17.8 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.5 2.9-2.2 5.3-4.7 6.9l7.3 5.7c4.3-3.9 6.7-9.7 6.7-16.6z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.7 28.6A14.9 14.9 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6l-7-5.4A23.8 23.8 0 0 0 .5 24c0 3.8.9 7.4 2.4 10.6l7.8-6z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 47c5.4 0 10-1.8 13.3-4.8l-7.3-5.7c-1.8 1.2-4.1 1.9-6.8 1.9-6.2 0-11.4-4.1-13.3-9.7l-7.8 6C7 41.3 14.8 47 24 47z"
+      />
     </svg>
   );
 }
@@ -293,39 +331,57 @@ function GoogleIcon() {
 // ── Registration Page ────────────────────────────────────────────────────────
 const registrationSystem = new RegistrationSystem();
 
-const ROLES = [
-  { key: 'user',   label: 'Student', icon: <Utensils size={20} color="var(--red)" /> },
-  { key: 'vendor', label: 'Vendor',  icon: <Store    size={20} color="var(--red)" /> },
-  { key: 'rider',  label: 'Rider',   icon: <Bike     size={20} color="var(--red)" /> },
+const ROLES: Array<{ key: AuthRole; label: string; icon: React.ReactNode }> = [
+  {
+    key: "user",
+    label: "Student",
+    icon: <Utensils size={20} color="var(--red)" />,
+  },
+  {
+    key: "vendor",
+    label: "Vendor",
+    icon: <Store size={20} color="var(--red)" />,
+  },
+  { key: "rider", label: "Rider", icon: <Bike size={20} color="var(--red)" /> },
 ];
 
 export default function RegisterPage() {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [role,         setRole]         = useState(searchParams.get('role') || 'user');
-  const [form,         setForm]         = useState({ name: '', email: '', password: '', confirm: '' });
-  const [showPw,       setShowPw]       = useState(false);
-  const [showConfirm,  setShowConfirm]  = useState(false);
-  const [status,       setStatus]       = useState('idle'); // idle | loading | success
-  const [error,        setError]        = useState('');
-  const [fieldErrors,  setFieldErrors]  = useState({});
-  const [submitShake,  setSubmitShake]  = useState(false);
+  const [role, setRole] = useState<AuthRole>(() => {
+    const param = searchParams.get("role");
+    return param === "vendor" || param === "rider" ? param : "user";
+  });
+  const [form, setForm] = useState<RegistrationForm>({
+    name: "",
+    email: "",
+    password: "",
+    confirm: "",
+  });
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [submitShake, setSubmitShake] = useState(false);
 
   const strength = getStrength(form.password);
 
   function validate() {
-    const errs = {};
-    if (!form.name.trim())              errs.name     = 'Name is required.';
-    if (!form.email.includes('@'))      errs.email    = 'Enter a valid email.';
-    if (form.password.length < 8)       errs.password = 'Password must be at least 8 characters.';
-    if (form.password !== form.confirm) errs.confirm  = 'Passwords do not match.';
+    const errs: FieldErrors = {};
+    if (!form.name.trim()) errs.name = "Name is required.";
+    if (!form.email.includes("@")) errs.email = "Enter a valid email.";
+    if (form.password.length < 8)
+      errs.password = "Password must be at least 8 characters.";
+    if (form.password !== form.confirm)
+      errs.confirm = "Passwords do not match.";
     return errs;
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
+    setError("");
     const errs = validate();
     if (Object.keys(errs).length) {
       setFieldErrors(errs);
@@ -334,80 +390,122 @@ export default function RegisterPage() {
       return;
     }
     setFieldErrors({});
-    setStatus('loading');
+    setStatus("loading");
 
     try {
       await registrationSystem.register({
-        name:     form.name,
-        email:    form.email,
+        name: form.name,
+        email: form.email,
         password: form.password,
-        role:     role === 'rider' ? 'rider' : role, // extend schema later
+        role: role === "rider" ? "rider" : role, // extend schema later
       });
 
-      setStatus('success');
+      setStatus("success");
 
       // Confetti 🎉
       const end = Date.now() + 2600;
       const fire = () => {
-        confetti({ particleCount: 6, angle: 60,  spread: 52, origin: { x: 0 }, colors: ['#e60000','#fff','#ff6b35'] });
-        confetti({ particleCount: 6, angle: 120, spread: 52, origin: { x: 1 }, colors: ['#e60000','#fff','#ff6b35'] });
+        confetti({
+          particleCount: 6,
+          angle: 60,
+          spread: 52,
+          origin: { x: 0 },
+          colors: ["#e60000", "#fff", "#ff6b35"],
+        });
+        confetti({
+          particleCount: 6,
+          angle: 120,
+          spread: 52,
+          origin: { x: 1 },
+          colors: ["#e60000", "#fff", "#ff6b35"],
+        });
         if (Date.now() < end) requestAnimationFrame(fire);
       };
       fire();
 
-      const dest = searchParams.get('next') || (role === 'vendor' ? '/dashboard/vendor' : '/dashboard/user');
+      const dest =
+        searchParams.get("next") ||
+        (role === "vendor" ? "/dashboard/vendor" : "/dashboard/user");
       setTimeout(() => router.push(dest), 2500);
-
     } catch (err) {
-      setStatus('idle');
+      setStatus("idle");
       // Friendly Firebase error messages
-      const code = err?.code || '';
-      if (code === 'auth/email-already-in-use') setError('An account with this email already exists.');
-      else if (code === 'auth/invalid-email')   setError('Please enter a valid email address.');
-      else if (code === 'auth/weak-password')   setError('Choose a stronger password (min 8 characters).');
-      else                                      setError(err?.message || 'Registration failed. Please try again.');
+      const authError = err as { code?: string; message?: string };
+      const code = authError.code || "";
+      if (code === "auth/email-already-in-use")
+        setError("An account with this email already exists.");
+      else if (code === "auth/invalid-email")
+        setError("Please enter a valid email address.");
+      else if (code === "auth/weak-password")
+        setError("Choose a stronger password (min 8 characters).");
+      else
+        setError(authError.message || "Registration failed. Please try again.");
     }
   }
 
   async function handleGoogle() {
-    setError('');
-    setStatus('loading');
+    setError("");
+    setStatus("loading");
     try {
-      const { AuthSystem } = await import('@/lib/RegistrationSystem');
+      const { AuthSystem } = await import("@/lib/RegistrationSystem");
       const authSys = new AuthSystem();
       const { role: resolvedRole } = await authSys.loginWithGoogle();
-      setStatus('success');
-      const dest = resolvedRole === 'vendor' ? '/dashboard/vendor' : '/dashboard/user';
+      setStatus("success");
+      const dest =
+        resolvedRole === "vendor" ? "/dashboard/vendor" : "/dashboard/user";
       setTimeout(() => router.push(dest), 1000);
-    } catch (err) {
-      setStatus('idle');
-      setError(err?.message || 'Google sign-in failed.');
+    } catch (err: unknown) {
+      setStatus("idle");
+      const authError = err as { message?: string };
+      setError(authError.message || "Google sign-in failed.");
     }
   }
 
-  const namePlaceholder = role === 'vendor' ? 'Restaurant name' : role === 'rider' ? 'Full name' : 'Full name';
+  const namePlaceholder =
+    role === "vendor"
+      ? "Restaurant name"
+      : role === "rider"
+        ? "Full name"
+        : "Full name";
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="page">
-
         {/* ── LEFT PANEL ── */}
         <div className="left-panel">
-          <a href="/" className="left-logo">ODG<span>.</span></a>
+          <Link href="/" className="left-logo">
+            ODG<span>.</span>
+          </Link>
 
           <div className="left-content">
-            <h1 className="left-h1">Join the<br />campus<br />network.</h1>
+            <h1 className="left-h1">
+              Join the
+              <br />
+              campus
+              <br />
+              network.
+            </h1>
             <p className="left-sub">
-              Students, vendors, and riders powering the fastest food delivery on Nigerian campuses.
+              Students, vendors, and riders powering the fastest food delivery
+              on Nigerian campuses.
             </p>
           </div>
 
           <div className="role-benefits">
             {[
-              { icon: <Utensils size={18} color="#fff" />, text: 'Students — hot meals in 15 minutes, hostel-precise.' },
-              { icon: <Store    size={18} color="#fff" />, text: 'Vendors — live orders, analytics, zero commission setup.' },
-              { icon: <Bike     size={18} color="#fff" />, text: 'Riders — flexible earnings, daily payouts.' },
+              {
+                icon: <Utensils size={18} color="#fff" />,
+                text: "Students — hot meals in 15 minutes, hostel-precise.",
+              },
+              {
+                icon: <Store size={18} color="#fff" />,
+                text: "Vendors — live orders, analytics, zero commission setup.",
+              },
+              {
+                icon: <Bike size={18} color="#fff" />,
+                text: "Riders — flexible earnings, daily payouts.",
+              },
             ].map((b, i) => (
               <div key={i} className="role-benefit">
                 <div className="role-benefit-icon">{b.icon}</div>
@@ -420,29 +518,37 @@ export default function RegisterPage() {
         {/* ── RIGHT PANEL ── */}
         <div className="right-panel">
           <div className="form-card">
-            <button className="back-link" onClick={() => router.push('/')}>
+            <button className="back-link" onClick={() => router.push("/")}>
               <ArrowLeft size={16} /> Back to home
             </button>
 
-            {status === 'success' ? (
+            {status === "success" ? (
               <div className="success-state">
                 <CheckCircle2 size={72} className="success-icon" />
-                <h2 className="success-h">You're in!</h2>
-                <p className="success-sub">Account created. Heading to your dashboard…</p>
+                <h2 className="success-h">You&apos;re in!</h2>
+                <p className="success-sub">
+                  Account created. Heading to your dashboard…
+                </p>
               </div>
             ) : (
               <>
                 <h1 className="form-title">Create account</h1>
-                <p className="form-sub">Choose your role and fill in your details.</p>
+                <p className="form-sub">
+                  Choose your role and fill in your details.
+                </p>
 
                 {/* Role selector */}
                 <div className="role-tabs">
-                  {ROLES.map(r => (
+                  {ROLES.map((r) => (
                     <button
                       key={r.key}
                       type="button"
-                      className={`role-tab ${role === r.key ? 'active' : ''}`}
-                      onClick={() => { setRole(r.key); setError(''); setFieldErrors({}); }}
+                      className={`role-tab ${role === r.key ? "active" : ""}`}
+                      onClick={() => {
+                        setRole(r.key);
+                        setError("");
+                        setFieldErrors({});
+                      }}
                     >
                       {r.icon}
                       <span className="role-tab-label">{r.label}</span>
@@ -457,17 +563,21 @@ export default function RegisterPage() {
                   {/* Name */}
                   <div className="field">
                     <label className="field-label">
-                      {role === 'vendor' ? 'Restaurant name' : 'Full name'}
+                      {role === "vendor" ? "Restaurant name" : "Full name"}
                     </label>
                     <input
                       type="text"
-                      className={`reg-input${fieldErrors.name ? ' error' : ''}`}
+                      className={`reg-input${fieldErrors.name ? " error" : ""}`}
                       placeholder={namePlaceholder}
                       value={form.name}
-                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, name: e.target.value }))
+                      }
                       autoComplete="name"
                     />
-                    {fieldErrors.name && <p className="field-error">{fieldErrors.name}</p>}
+                    {fieldErrors.name && (
+                      <p className="field-error">{fieldErrors.name}</p>
+                    )}
                   </div>
 
                   {/* Email */}
@@ -475,13 +585,17 @@ export default function RegisterPage() {
                     <label className="field-label">Email address</label>
                     <input
                       type="email"
-                      className={`reg-input${fieldErrors.email ? ' error' : ''}`}
+                      className={`reg-input${fieldErrors.email ? " error" : ""}`}
                       placeholder="you@university.edu"
                       value={form.email}
-                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, email: e.target.value }))
+                      }
                       autoComplete="email"
                     />
-                    {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
+                    {fieldErrors.email && (
+                      <p className="field-error">{fieldErrors.email}</p>
+                    )}
                   </div>
 
                   {/* Password */}
@@ -489,34 +603,55 @@ export default function RegisterPage() {
                     <label className="field-label">Password</label>
                     <div className="input-wrap">
                       <input
-                        type={showPw ? 'text' : 'password'}
-                        className={`reg-input pr${fieldErrors.password ? ' error' : ''}`}
+                        type={showPw ? "text" : "password"}
+                        className={`reg-input pr${fieldErrors.password ? " error" : ""}`}
                         placeholder="Min 8 characters"
                         value={form.password}
-                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, password: e.target.value }))
+                        }
                         autoComplete="new-password"
                       />
-                      <button type="button" className="eye-btn" onClick={() => setShowPw(v => !v)}>
+                      <button
+                        type="button"
+                        className="eye-btn"
+                        onClick={() => setShowPw((v) => !v)}
+                      >
                         {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                     {form.password && (
                       <>
                         <div className="strength-bar">
-                          {[0,1,2,3].map(i => (
+                          {[0, 1, 2, 3].map((i) => (
                             <div
                               key={i}
                               className="strength-seg"
-                              style={{ background: i < strength ? strengthColors[strength - 1] : undefined }}
+                              style={{
+                                background:
+                                  i < strength
+                                    ? strengthColors[strength - 1]
+                                    : undefined,
+                              }}
                             />
                           ))}
                         </div>
-                        <p className="strength-label" style={{ color: strength > 0 ? strengthColors[strength - 1] : 'var(--muted)' }}>
-                          {strengthLabels[strength - 1] || 'Too weak'}
+                        <p
+                          className="strength-label"
+                          style={{
+                            color:
+                              strength > 0
+                                ? strengthColors[strength - 1]
+                                : "var(--muted)",
+                          }}
+                        >
+                          {strengthLabels[strength - 1] || "Too weak"}
                         </p>
                       </>
                     )}
-                    {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
+                    {fieldErrors.password && (
+                      <p className="field-error">{fieldErrors.password}</p>
+                    )}
                   </div>
 
                   {/* Confirm password */}
@@ -524,30 +659,43 @@ export default function RegisterPage() {
                     <label className="field-label">Confirm password</label>
                     <div className="input-wrap">
                       <input
-                        type={showConfirm ? 'text' : 'password'}
-                        className={`reg-input pr${fieldErrors.confirm ? ' error' : ''}`}
+                        type={showConfirm ? "text" : "password"}
+                        className={`reg-input pr${fieldErrors.confirm ? " error" : ""}`}
                         placeholder="Repeat your password"
                         value={form.confirm}
-                        onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, confirm: e.target.value }))
+                        }
                         autoComplete="new-password"
                       />
-                      <button type="button" className="eye-btn" onClick={() => setShowConfirm(v => !v)}>
+                      <button
+                        type="button"
+                        className="eye-btn"
+                        onClick={() => setShowConfirm((v) => !v)}
+                      >
                         {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
-                    {fieldErrors.confirm && <p className="field-error">{fieldErrors.confirm}</p>}
+                    {fieldErrors.confirm && (
+                      <p className="field-error">{fieldErrors.confirm}</p>
+                    )}
                   </div>
 
                   {/* Submit */}
                   <button
                     type="submit"
-                    className={`btn-submit${submitShake ? ' shake' : ''}`}
-                    disabled={status === 'loading'}
+                    className={`btn-submit${submitShake ? " shake" : ""}`}
+                    disabled={status === "loading"}
                   >
-                    {status === 'loading'
-                      ? <><div className="spinner" /> Creating account…</>
-                      : <><Zap size={18} /> Sign up &amp; continue</>
-                    }
+                    {status === "loading" ? (
+                      <>
+                        <div className="spinner" /> Creating account…
+                      </>
+                    ) : (
+                      <>
+                        <Zap size={18} /> Sign up &amp; continue
+                      </>
+                    )}
                   </button>
                 </form>
 
@@ -557,18 +705,21 @@ export default function RegisterPage() {
                   <div className="divider-line" />
                 </div>
 
-                <button className="btn-google" onClick={handleGoogle} disabled={status === 'loading'}>
+                <button
+                  className="btn-google"
+                  onClick={handleGoogle}
+                  disabled={status === "loading"}
+                >
                   <GoogleIcon /> Continue with Google
                 </button>
 
                 <p className="signin-link">
-                  Already have an account? <a href="/login">Sign in →</a>
+                  Already have an account? <Link href="/login">Sign in →</Link>
                 </p>
               </>
             )}
           </div>
         </div>
-
       </div>
     </>
   );

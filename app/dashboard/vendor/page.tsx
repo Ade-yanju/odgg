@@ -7,7 +7,6 @@ import {
   Wallet,
   PackageCheck,
   ListOrdered,
-  Clock,
   ArrowUpRight,
   LogOut,
   CheckCircle2,
@@ -20,7 +19,6 @@ import {
   ToggleLeft,
   ToggleRight,
   ChefHat,
-  Tag,
   Timer,
 } from "lucide-react";
 import { auth, db } from "../../../lib/firebase";
@@ -35,7 +33,6 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
 const CSS = `
@@ -178,6 +175,53 @@ const STATUS_META = {
     class: "status-out",
     emoji: "🛵",
   },
+  delivered: { label: "Delivered", class: "status-accepted", emoji: "🎉" },
+} as const;
+
+type OrderStatus = "pending" | "accepted" | "out_for_delivery" | "delivered";
+
+interface Vendor {
+  id: string;
+  storeName: string;
+  ownerName?: string;
+  status?: "open" | "closed";
+  balance?: number;
+  totalOrders?: number;
+  totalRevenue?: number;
+  [key: string]: unknown;
+}
+
+interface VendorOrder {
+  id: string;
+  vendorId: string;
+  mealName: string;
+  price: number;
+  status: OrderStatus;
+  createdAt: number;
+  completedAt?: number;
+  [key: string]: unknown;
+}
+
+interface VendorMeal {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  estimatedTime?: string;
+  description?: string;
+  vendorId: string;
+  vendorName: string;
+  available?: boolean;
+  createdAt: number;
+  [key: string]: unknown;
+}
+
+type MealForm = {
+  name: string;
+  price: string;
+  category: string;
+  estimatedTime: string;
+  description: string;
 };
 
 function getMealEmoji(name = "") {
@@ -193,7 +237,7 @@ function getMealEmoji(name = "") {
   return "🍽️";
 }
 
-function formatTime(ts) {
+function formatTime(ts?: number) {
   if (!ts) return "";
   const diff = Date.now() - ts;
   const m = Math.floor(diff / 60000);
@@ -213,15 +257,17 @@ const MEAL_CATEGORIES = [
 
 export default function VendorDashboard() {
   const router = useRouter();
-  const [uid, setUid] = useState(null);
-  const [vendor, setVendor] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [meals, setMeals] = useState([]);
-  const [activeTab, setActiveTab] = useState("orders"); // "orders" | "menu"
+  const [uid, setUid] = useState<string | null>(null);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [orders, setOrders] = useState<VendorOrder[]>([]);
+  const [meals, setMeals] = useState<VendorMeal[]>([]);
+  const [activeTab, setActiveTab] = useState<"orders" | "menu">("orders");
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState({});
-  const [mealForm, setMealForm] = useState({
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [mealForm, setMealForm] = useState<MealForm>({
     name: "",
     price: "",
     category: "Main",
@@ -245,8 +291,11 @@ export default function VendorDashboard() {
   useEffect(() => {
     if (!uid) return;
     const unsub = onSnapshot(doc(db, "vendors", uid), (snap) => {
-      if (snap.exists()) setVendor({ id: snap.id, ...snap.data() });
-      else router.replace("/login");
+      if (snap.exists()) {
+        setVendor({ ...(snap.data() as Vendor), id: snap.id });
+      } else {
+        router.replace("/login");
+      }
     });
     return () => unsub();
   }, [uid, router]);
@@ -255,7 +304,10 @@ export default function VendorDashboard() {
     if (!uid) return;
     const q = query(collection(db, "orders"), where("vendorId", "==", uid));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<VendorOrder, "id">),
+      })) as VendorOrder[];
       data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setOrders(data);
     });
@@ -266,27 +318,37 @@ export default function VendorDashboard() {
     if (!uid) return;
     const q = query(collection(db, "meals"), where("vendorId", "==", uid));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as Omit<VendorMeal, "id">),
+      })) as VendorMeal[];
       data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setMeals(data);
     });
     return () => unsub();
   }, [uid]);
 
-  const updateStatus = useCallback(async (orderId, status) => {
-    setActionLoading((p) => ({ ...p, [orderId]: true }));
-    try {
-      await runTransaction(db, async (t) => {
-        t.update(doc(db, "orders", orderId), { status, updatedAt: Date.now() });
-      });
-    } catch (e) {
-      console.error(e);
-    }
-    setActionLoading((p) => ({ ...p, [orderId]: false }));
-  }, []);
+  const updateStatus = useCallback(
+    async (orderId: string, status: OrderStatus) => {
+      setActionLoading((p) => ({ ...p, [orderId]: true }));
+      try {
+        await runTransaction(db, async (t) => {
+          t.update(doc(db, "orders", orderId), {
+            status,
+            updatedAt: Date.now(),
+          });
+        });
+      } catch (e) {
+        console.error(e);
+      }
+      setActionLoading((p) => ({ ...p, [orderId]: false }));
+    },
+    [],
+  );
 
   const markDelivered = useCallback(
-    async (order) => {
+    async (order: VendorOrder) => {
+      if (!uid) return;
       setActionLoading((p) => ({ ...p, [order.id]: true }));
       try {
         await runTransaction(db, async (t) => {
@@ -296,7 +358,11 @@ export default function VendorDashboard() {
             balance = 0,
             totalOrders = 0,
             totalRevenue = 0,
-          } = vSnap.data();
+          } = vSnap.data() as {
+            balance?: number;
+            totalOrders?: number;
+            totalRevenue?: number;
+          };
           t.update(doc(db, "orders", order.id), {
             status: "delivered",
             completedAt: Date.now(),
@@ -344,7 +410,7 @@ export default function VendorDashboard() {
     setSubmitting(false);
   }, [mealForm, uid, vendor]);
 
-  const toggleMealAvailability = useCallback(async (meal) => {
+  const toggleMealAvailability = useCallback(async (meal: VendorMeal) => {
     try {
       await updateDoc(doc(db, "meals", meal.id), {
         available: !meal.available,
@@ -354,7 +420,7 @@ export default function VendorDashboard() {
     }
   }, []);
 
-  const deleteMeal = useCallback(async (mealId) => {
+  const deleteMeal = useCallback(async (mealId: string) => {
     if (!confirm("Delete this meal from your menu?")) return;
     try {
       await deleteDoc(doc(db, "meals", mealId));

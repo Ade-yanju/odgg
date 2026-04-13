@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Zap, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
@@ -8,6 +9,7 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -138,7 +140,12 @@ function GoogleIcon() {
   );
 }
 
-const ROLE_OPTIONS = [
+const ROLE_OPTIONS: Array<{
+  value: UserRole;
+  emoji: string;
+  name: string;
+  desc: string;
+}> = [
   {
     value: "student",
     emoji: "🎓",
@@ -160,7 +167,7 @@ const ROLE_OPTIONS = [
 ];
 
 // ── Core: read role from whichever collection the user belongs to ────────────
-async function getRoleFromFirestore(uid) {
+async function getRoleFromFirestore(uid: string) {
   // Check all three collections in parallel
   const [userSnap, vendorSnap, riderSnap] = await Promise.all([
     getDoc(doc(db, "users", uid)),
@@ -173,7 +180,9 @@ async function getRoleFromFirestore(uid) {
   return null; // new user — needs onboarding
 }
 
-function getDashboardPath(role) {
+type UserRole = "student" | "vendor" | "rider" | null;
+
+function getDashboardPath(role: UserRole) {
   if (role === "vendor") return "/dashboard/vendor";
   if (role === "rider") return "/dashboard/rider";
   return "/dashboard/user"; // student / fallback
@@ -190,8 +199,8 @@ export default function LoginPage() {
   const [shake, setShake] = useState(false);
 
   // Google new-user role picker
-  const [pendingUser, setPendingUser] = useState(null); // firebase User object
-  const [selectedRole, setSelectedRole] = useState("student");
+  const [pendingUser, setPendingUser] = useState<User | null>(null); // firebase User object
+  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const [savingRole, setSavingRole] = useState(false);
 
   function triggerShake() {
@@ -199,14 +208,14 @@ export default function LoginPage() {
     setTimeout(() => setShake(false), 500);
   }
 
-  function getRedirect(role) {
+  function getRedirect(role: UserRole) {
     const next = searchParams.get("next");
     if (next) return next;
     return getDashboardPath(role);
   }
 
   // ── Email / password login ─────────────────────────────────────────────
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     if (!form.email || !form.password) {
@@ -230,7 +239,8 @@ export default function LoginPage() {
       router.push(getRedirect(role));
     } catch (err) {
       setStatus("idle");
-      const code = err?.code || "";
+      const authError = err as { code?: string; message?: string };
+      const code = authError.code || "";
       if (
         code === "auth/user-not-found" ||
         code === "auth/wrong-password" ||
@@ -242,7 +252,7 @@ export default function LoginPage() {
       } else if (code === "auth/user-disabled") {
         setError("This account has been disabled. Contact support.");
       } else {
-        setError(err?.message || "Sign in failed. Please try again.");
+        setError(authError.message || "Sign in failed. Please try again.");
       }
       triggerShake();
     }
@@ -265,10 +275,11 @@ export default function LoginPage() {
         setStatus("idle");
         setPendingUser(cred.user);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setStatus("idle");
-      if (err?.code !== "auth/popup-closed-by-user") {
-        setError(err?.message || "Google sign-in failed.");
+      const authError = err as { code?: string; message?: string };
+      if (authError.code !== "auth/popup-closed-by-user") {
+        setError(authError.message || "Google sign-in failed.");
       }
     }
   }
@@ -334,8 +345,9 @@ export default function LoginPage() {
       await sendPasswordResetEmail(auth, form.email);
       setError("");
       alert(`Password reset email sent to ${form.email}. Check your inbox.`);
-    } catch (err) {
-      setError(err?.message || "Failed to send reset email.");
+    } catch (err: unknown) {
+      const authError = err as { message?: string };
+      setError(authError.message || "Failed to send reset email.");
     }
   }
 
@@ -345,9 +357,9 @@ export default function LoginPage() {
       <div className="page">
         {/* ── LEFT PANEL ── */}
         <div className="left-panel">
-          <a href="/" className="left-logo">
+          <Link href="/" className="left-logo">
             ODG<span>.</span>
-          </a>
+          </Link>
           <div className="left-content">
             <h1 className="left-h1">
               Welcome
@@ -363,8 +375,8 @@ export default function LoginPage() {
           </div>
           <div className="testimonial">
             <p className="testimonial-text">
-              "I ordered from my hostel, and it arrived before I even locked my
-              door. ODG is the real deal on this campus."
+              &quot;I ordered from my hostel, and it arrived before I even
+              locked my door. ODG is the real deal on this campus.&quot;
             </p>
             <div className="testimonial-author">
               <div className="testimonial-avatar">A</div>
@@ -469,7 +481,8 @@ export default function LoginPage() {
             </button>
 
             <p className="signup-link">
-              Don't have an account? <a href="/register">Create one →</a>
+              Don&apos;t have an account?{" "}
+              <Link href="/register">Create one →</Link>
             </p>
           </div>
         </div>

@@ -9,15 +9,9 @@ import {
   CheckCircle2,
   Search,
   LogOut,
-  Zap,
   Bell,
   X,
-  Home,
-  User,
-  Edit3,
   Star,
-  ChevronRight,
-  Package,
   RotateCcw,
 } from "lucide-react";
 import { auth, db } from "../../../lib/firebase";
@@ -197,7 +191,7 @@ function getMealEmoji(name = "") {
   return "🍽️";
 }
 
-function formatTime(ts) {
+function formatTime(ts: number | undefined) {
   if (!ts) return "";
   const diff = Date.now() - ts;
   const m = Math.floor(diff / 60000);
@@ -237,7 +231,12 @@ const STATUS_CONFIG = {
     etaText: "Rider has picked up your order",
     progress: "progress-85",
   },
-};
+} as const;
+
+type StatusKey = keyof typeof STATUS_CONFIG;
+
+const getStatusConfig = (status: string) =>
+  STATUS_CONFIG[status as StatusKey] || STATUS_CONFIG.pending;
 
 const HOSTELS = [
   "Hall 1",
@@ -254,20 +253,76 @@ const HOSTELS = [
 
 const ALL_CATEGORY = "All";
 
+interface UserProfile {
+  id: string;
+  fullName?: string;
+  phone?: string;
+  deliveryAddress?: {
+    hostel?: string;
+    room?: string;
+    landmark?: string;
+  };
+  [key: string]: unknown;
+}
+
+type OrderStatus =
+  | "pending"
+  | "accepted"
+  | "out_for_delivery"
+  | "picked_up"
+  | "delivered";
+
+interface Order {
+  id: string;
+  userId: string;
+  vendorId: string;
+  vendorName: string;
+  mealName: string;
+  mealId: string;
+  price: number;
+  status: OrderStatus;
+  deliveryAddress: Record<string, unknown>;
+  createdAt: number;
+  completedAt?: number;
+  [key: string]: unknown;
+}
+
+interface Meal {
+  id: string;
+  name: string;
+  vendorId: string;
+  vendorName: string;
+  price: number;
+  available?: boolean;
+  category?: string;
+  estimatedTime?: string;
+  rating?: number;
+  description?: string;
+  [key: string]: unknown;
+}
+
+interface ProfileForm {
+  fullName?: string;
+  phone?: string;
+  hostel?: string;
+  room?: string;
+  landmark?: string;
+}
+
 export default function UserDashboard() {
   const router = useRouter();
-  const [uid, setUid] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [meals, setMeals] = useState([]);
+  const [uid, setUid] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [meals, setMeals] = useState<Meal[]>([]);
   const [search, setSearch] = useState("");
-  const [activeCategory, setCategory] = useState(ALL_CATEGORY);
-  const [ordering, setOrdering] = useState({});
-  const [toast, setToast] = useState(null);
+  const [activeCategory, setCategory] = useState<string>(ALL_CATEGORY);
+  const [ordering, setOrdering] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [mealsLoading, setMealsLoading] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({});
+  const [profileForm, setProfileForm] = useState<ProfileForm>({});
   const [savingProfile, setSavingProfile] = useState(false);
 
   // ── Auth ───────────────────────────────────────────────────────────────
@@ -288,7 +343,7 @@ export default function UserDashboard() {
     if (!uid) return;
     const unsub = onSnapshot(doc(db, "users", uid), (snap) => {
       if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() };
+        const data = { id: snap.id, ...snap.data() } as UserProfile;
         setUserProfile(data);
         // Sync form whenever profile changes (but don't overwrite mid-edit)
         setProfileForm((p) =>
@@ -314,7 +369,7 @@ export default function UserDashboard() {
     if (!uid) return;
     const q = query(collection(db, "orders"), where("userId", "==", uid));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Order);
       data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       setOrders(data);
     });
@@ -328,7 +383,10 @@ export default function UserDashboard() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const data = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<Meal, "id">),
+        })) as Meal[];
         setMeals(data);
         setMealsLoading(false);
       },
@@ -342,7 +400,7 @@ export default function UserDashboard() {
 
   // ── Place order ────────────────────────────────────────────────────────
   const placeOrder = useCallback(
-    async (meal) => {
+    async (meal: { id: string; [key: string]: unknown }) => {
       if (!uid || !userProfile) return;
 
       // Warn if no address set
@@ -381,12 +439,12 @@ export default function UserDashboard() {
     setSavingProfile(true);
     try {
       await updateDoc(doc(db, "users", uid), {
-        fullName: profileForm.fullName.trim(),
-        phone: profileForm.phone.trim(),
+        fullName: (profileForm.fullName || "").trim(),
+        phone: (profileForm.phone || "").trim(),
         deliveryAddress: {
           hostel: profileForm.hostel,
-          room: profileForm.room.trim(),
-          landmark: profileForm.landmark.trim(),
+          room: (profileForm.room || "").trim(),
+          landmark: (profileForm.landmark || "").trim(),
         },
         updatedAt: Date.now(),
       });
@@ -401,7 +459,7 @@ export default function UserDashboard() {
     setSavingProfile(false);
   }, [uid, profileForm]);
 
-  const showToast = (msg) => {
+  const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   };
@@ -419,15 +477,20 @@ export default function UserDashboard() {
   // Build unique category list from live meals
   const categories = [
     ALL_CATEGORY,
-    ...Array.from(new Set(meals.map((m) => m.category).filter(Boolean))),
+    ...Array.from(
+      new Set(meals.map((m) => m.category).filter(Boolean) as string[]),
+    ),
   ];
 
   const filteredMeals = meals.filter((m) => {
     const matchSearch =
       search.trim() === "" ||
-      m.name?.toLowerCase().includes(search.toLowerCase()) ||
-      m.vendorName?.toLowerCase().includes(search.toLowerCase()) ||
-      m.category?.toLowerCase().includes(search.toLowerCase());
+      (typeof m.name === "string" &&
+        m.name.toLowerCase().includes(search.toLowerCase())) ||
+      (typeof m.vendorName === "string" &&
+        m.vendorName.toLowerCase().includes(search.toLowerCase())) ||
+      (typeof m.category === "string" &&
+        m.category.toLowerCase().includes(search.toLowerCase()));
     const matchCat =
       activeCategory === ALL_CATEGORY || m.category === activeCategory;
     return matchSearch && matchCat;
@@ -538,8 +601,7 @@ export default function UserDashboard() {
             <section className="tracker-section">
               <div className="section-label">Active Orders</div>
               {activeOrders.map((order) => {
-                const cfg =
-                  STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+                const cfg = getStatusConfig(order.status);
                 return (
                   <div key={order.id} className={`tracker-card ${cfg.class}`}>
                     <div className="tracker-left">
@@ -677,7 +739,7 @@ export default function UserDashboard() {
                           <Clock size={12} />
                           {meal.estimatedTime || "15 mins"}
                         </span>
-                        {meal.rating && (
+                        {typeof meal.rating === "number" && (
                           <span className="meal-meta-item">
                             <Star
                               size={12}

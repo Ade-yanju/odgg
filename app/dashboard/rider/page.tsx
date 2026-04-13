@@ -33,6 +33,38 @@ import {
 } from "firebase/firestore";
 
 // ─────────────────────────────────────────────
+//  TYPES
+// ─────────────────────────────────────────────
+interface Rider {
+  id: string;
+  fullName: string;
+  isOnline: boolean;
+  balance: number;
+  totalDeliveries: number;
+  totalEarnings: number;
+}
+
+interface Order {
+  id: string;
+  riderId?: string | null;
+  status: string;
+  createdAt?: number;
+  mealName?: string;
+  vendorName?: string;
+  price?: number;
+  deliveryAddress?: {
+    hostel?: string;
+    room?: string;
+  };
+  pickedUpAt?: number;
+  completedAt?: number;
+  riderEarnings?: number;
+  claimedAt?: number;
+  riderName?: string;
+  [key: string]: unknown;
+}
+
+// ─────────────────────────────────────────────
 //  CSS
 // ─────────────────────────────────────────────
 const CSS = `
@@ -356,7 +388,7 @@ const CSS = `
 // ─────────────────────────────────────────────
 const RIDER_COMMISSION = 0.2; // rider earns 20% of order price
 
-function formatTime(ts) {
+function formatTime(ts: number | undefined): string {
   if (!ts) return "";
   const m = Math.floor((Date.now() - ts) / 60000);
   if (m < 1) return "just now";
@@ -370,14 +402,16 @@ function formatTime(ts) {
 export default function RiderDashboard() {
   const router = useRouter();
 
-  const [uid, setUid] = useState(null);
-  const [rider, setRider] = useState(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [rider, setRider] = useState<Rider | null>(null);
   const [isOnline, setIsOnline] = useState(false);
-  const [available, setAvailable] = useState([]); // orders at out_for_delivery assigned to nobody
-  const [myOrder, setMyOrder] = useState(null); // currently active delivery
-  const [earnings, setEarnings] = useState([]); // completed by me
+  const [available, setAvailable] = useState<Order[]>([]); // orders at out_for_delivery assigned to nobody
+  const [myOrder, setMyOrder] = useState<Order | null>(null); // currently active delivery
+  const [earnings, setEarnings] = useState<Order[]>([]); // completed by me
   const [authLoading, setAuthLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState({});
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // ── Auth ──────────────────────────────────
   useEffect(() => {
@@ -397,7 +431,7 @@ export default function RiderDashboard() {
     if (!uid) return;
     const unsub = onSnapshot(doc(db, "riders", uid), (snap) => {
       if (snap.exists()) {
-        const data = { id: snap.id, ...snap.data() };
+        const data = { id: snap.id, ...snap.data() } as Rider;
         setRider(data);
         setIsOnline(data.isOnline || false);
       } else {
@@ -422,7 +456,7 @@ export default function RiderDashboard() {
     );
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
+        .map((d) => ({ id: d.id, ...d.data() }) as Order)
         .filter((o) => !o.riderId); // unclaimed = no riderId field OR riderId is null/undefined
       data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       setAvailable(data);
@@ -439,7 +473,7 @@ export default function RiderDashboard() {
       where("status", "in", ["out_for_delivery", "picked_up"]),
     );
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Order);
       setMyOrder(data.length > 0 ? data[0] : null);
     });
     return () => unsub();
@@ -454,7 +488,7 @@ export default function RiderDashboard() {
       where("status", "==", "delivered"),
     );
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Order);
       data.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
       setEarnings(data);
     });
@@ -471,7 +505,7 @@ export default function RiderDashboard() {
 
   // ── Accept / claim an order ───────────────
   const claimOrder = useCallback(
-    async (order) => {
+    async (order: Order) => {
       if (!uid || myOrder) return; // can only hold one at a time
       setActionLoading((p) => ({ ...p, [order.id]: true }));
       try {
@@ -488,7 +522,7 @@ export default function RiderDashboard() {
           });
         });
       } catch (e) {
-        console.error("Claim failed:", e.message);
+        console.error("Claim failed:", (e as Error).message);
       }
       setActionLoading((p) => ({ ...p, [order.id]: false }));
     },
@@ -574,7 +608,7 @@ export default function RiderDashboard() {
         .toUpperCase()
     : "?";
 
-  const addressLabel = (order) => {
+  const addressLabel = (order: Order) => {
     const addr = order?.deliveryAddress;
     if (!addr) return "No address provided";
     return `${addr.hostel || "Unknown hostel"}, Room ${addr.room || "?"}`;
@@ -731,7 +765,7 @@ export default function RiderDashboard() {
                 <div className="stat-value">
                   ₦{todayEarnings.toLocaleString()}
                 </div>
-                <div className="stat-label">Today's earnings</div>
+                <div className="stat-label">Todays earnings</div>
               </div>
 
               {/* Today's deliveries */}
@@ -789,7 +823,7 @@ export default function RiderDashboard() {
                 {!isOnline ? (
                   <div className="panel-empty">
                     <div className="panel-empty-icon">💤</div>
-                    <div className="panel-empty-h">You're offline</div>
+                    <div className="panel-empty-h">You are offline</div>
                     <p style={{ fontSize: 13, color: "rgba(255,255,255,0.2)" }}>
                       Toggle online above to start receiving pickup requests.
                     </p>
