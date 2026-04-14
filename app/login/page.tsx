@@ -184,7 +184,7 @@ type UserRole = "student" | "vendor" | "rider" | null;
 
 function getDashboardPath(role: UserRole) {
   if (role === "vendor") return "/dashboard/vendor";
-  if (role === "rider") return "/dashboard/rider";
+  if (role === "rider") return "/rider/dashboard";
   return "/dashboard/user"; // student / fallback
 }
 
