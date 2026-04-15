@@ -25,7 +25,7 @@ import {
   Radio,
   AlertCircle,
 } from "lucide-react";
-import { auth, db } from "../../../../lib/firebase";
+import { auth, db } from "../../../lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 
@@ -469,7 +469,7 @@ export default function TrackingPage() {
               Access Denied
             </h2>
             <p style={{ color: "rgba(255,255,255,.4)" }}>
-              You don't have permission to view this order.
+              You dont have permission to view this order.
             </p>
           </div>
         </div>
